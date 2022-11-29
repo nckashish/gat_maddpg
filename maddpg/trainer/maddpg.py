@@ -151,6 +151,7 @@ class MADDPGAgentTrainer(AgentTrainer):
         self.replay_sample_index = None
 
     def action(self, obs):
+        
         return self.act(obs[None])[0]
 
     def experience(self, obs, act, rew, new_obs, done, terminal):

@@ -6,14 +6,13 @@ from utils import layers
 from models.base_gattn import BaseGAttN
 import numpy as np
 import random
-#import tensorflow as tf
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+
 import maddpg.common.tf_util as U
 
 from maddpg.common.distributions import make_pdtype
 from maddpg import AgentTrainer
 from maddpg.trainer.replay_buffer import ReplayBuffer
+import graph_env as environment
 
 class GAT(BaseGAttN):
     def inference(inputs, nb_classes, nb_nodes, training, attn_drop, ffd_drop,
@@ -76,12 +75,13 @@ def p_train(make_obs_ph_n, act_space_n, p_index, p_func, q_func, optimizer, grad
 
         # wrap parameters in distribution
         act_pd = act_pdtype_n[p_index].pdfromflat(p)
-
+        # action == output of mlp model 
         act_sample = act_pd.sample()
+       # act_sample = environment.action_space()
         p_reg = tf.reduce_mean(tf.square(act_pd.flatparam()))
 
         act_input_n = act_ph_n + []
-        act_input_n[p_index] = act_pd.sample()
+        act_input_n[p_index] = act_sample
         q_input = tf.concat(obs_ph_n + act_input_n, 1)
         if local_q_func:
             q_input = tf.concat([obs_ph_n[p_index], act_input_n[p_index]], 1)
@@ -104,6 +104,8 @@ def p_train(make_obs_ph_n, act_space_n, p_index, p_func, q_func, optimizer, grad
 
         target_act_sample = act_pdtype_n[p_index].pdfromflat(target_p).sample()
         target_act = U.function(inputs=[obs_ph_n[p_index]], outputs=target_act_sample)
+
+        #clip output value to clip values
 
         return act, train, update_target_p, {'p_values': p_values, 'target_act': target_act}
 
@@ -145,13 +147,12 @@ def q_train(make_obs_ph_n, act_space_n, q_index, q_func, optimizer, grad_norm_cl
         return train, update_target_q, {'q_values': q_values, 'target_q_values': target_q_values}
 
 class MADDPGAgentTrainer(AgentTrainer):
-    def __init__(self, name, model, obs_shape_n, act_space_n, agent_index, args, local_q_func=False):
+    def __init__(self, name, model_critic, model_actor, obs_shape_n, act_space_n, agent_index, args, local_q_func=False):
         self.name = name
         self.n = len(obs_shape_n)
         self.agent_index = agent_index
         self.args = args
         obs_ph_n = []
-
         for i in range(self.n):
             obs_ph_n.append(U.BatchInput(obs_shape_n[i], name="observation"+str(i)).get())
 
@@ -161,7 +162,7 @@ class MADDPGAgentTrainer(AgentTrainer):
             make_obs_ph_n=obs_ph_n,
             act_space_n=act_space_n,
             q_index=agent_index,
-            q_func=model,
+            q_func=model_critic,
             optimizer=tf.train.AdamOptimizer(learning_rate=args.lr),
             grad_norm_clipping=0.5,
             local_q_func=local_q_func,
@@ -172,8 +173,8 @@ class MADDPGAgentTrainer(AgentTrainer):
             make_obs_ph_n=obs_ph_n,
             act_space_n=act_space_n,
             p_index=agent_index,
-            p_func=model,
-            q_func=model,
+            p_func=model_actor,
+            q_func=model_critic,
             optimizer=tf.train.AdamOptimizer(learning_rate=args.lr),
             grad_norm_clipping=0.5,
             local_q_func=local_q_func,
@@ -197,8 +198,8 @@ class MADDPGAgentTrainer(AgentTrainer):
     def update(self, agents, t):
         if len(self.replay_buffer) < self.max_replay_buffer_len: # replay buffer is not large enough
             return
-        if not t % 100 == 0:  # only update every 100 steps
-            return
+        #if not t % 100 == 0:  # only update every 100 steps
+        #    return
 
         self.replay_sample_index = self.replay_buffer.make_index(self.args.batch_size)
         # collect replay sample from all agents
