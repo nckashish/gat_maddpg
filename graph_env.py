@@ -24,7 +24,17 @@ def adj_matrix():
 
 def features():
     # 3 features values for each node.
-    return np.random.rand(10,3)
+    fet = [[0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]
+           [0.1, 0.3, 0.5]]
+    return fet
 
 
 def adj_to_bias(adj, sizes, nhood=1):

@@ -111,10 +111,11 @@ def train(arglist):
 
         t_len = 200
         episode_step = 0
+        isDiscrete = True
         
         for t_step in range(t_len):
             # get action space. 
-            action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
+            action_n = [agent.action(obs, isDiscrete) for agent, obs in zip(trainers,obs_n)]
 
             new_obs_n, rew_n, done_n = env.step(action_n)
             episode_step += 1
