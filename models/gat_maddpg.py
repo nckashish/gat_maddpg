@@ -93,7 +93,8 @@ def p_train(make_obs_ph_n, act_space_n, p_index, p_func, q_func, optimizer, grad
 
         # Create callable functions
         train = U.function(inputs=p_input, outputs=loss, updates=[optimize_expr])
-        act = U.function(inputs=p_input, outputs=act_sample)
+        #act = U.function(inputs=p_input, outputs=act_sample)
+        act = p
         p_values = U.function(p_input, p)
 
         # target network
@@ -186,13 +187,13 @@ class MADDPGAgentTrainer(AgentTrainer):
         self.replay_sample_index = None
 
     def action(self, obs, isDiscrete):
-        a = self.act(obs[None])[0]
+        a = self.act(obs)
         #clip values towards a certain bound. 
         action_bound = 1 if (isDiscrete) else 5
-        action_shift = 0 if (isDiscrete) else 
+        action_shift = 0 if (isDiscrete) else 0
         a = tf.clip_by_value(a, -action_bound + action_shift, action_bound + action_shift)
         #post process for a discrete action space
-        action = np.argmax(a) if isDiscrete else a
+        action = np.argmax(a) if isDiscrete else a[0]
         return action 
 
     def experience(self, obs, act, rew, new_obs, done, terminal):
